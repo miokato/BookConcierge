@@ -1,1 +1,1 @@
-web: gunicorn bookconcierge:app --log-file -
+web: gunicorn bookbot-heroku:app --log-file -
