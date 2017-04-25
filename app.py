@@ -15,6 +15,9 @@ from linebot.exceptions import (
 )
 from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
+    CarouselTemplate, CarouselColumn,
+    URITemplateAction, PostbackTemplateAction,
+    MessageTemplateAction, TemplateSendMessage
 )
 
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
@@ -50,25 +53,36 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    book_title = fetch_book(event.message.text)
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=book_title)
-    )
+    amazon_api = amazon_init()
+    books = fetch_books(amazon_api, keyword=event.message.text, num=3)
+    # line_bot_api.reply_message(
+    #     event.reply_token,
+    #     TextSendMessage(text=book_title)
+    # )
+    make_carousel(event, books)
 
 
-def fetch_book(keyword):
-    """fetch one book using amazon api"""
+def amazon_init():
     amazon_api = AmazonAPI(AMAZON_ACCESS_KEY,
                            AMAZON_ACCESS_SECRET,
                            AMAZON_TAG,
                            ErrorHandler=error_handler,
                            region='JP',
                            )
-    book = amazon_api.search_n(1, Keywords=keyword,
-                                     SearchIndex='Books')
-    book_title = book[0].title
-    return book_title
+    return amazon_api
+
+
+def fetch_books(amazon_api, keyword='', num=1):
+    """
+    fetch three books using amazon api
+    
+    :param amazon_api: 
+    :param keyword: 
+    :return: books object
+    """
+    books = amazon_api.search_n(num, Keywords=keyword,
+                                SearchIndex='Books')
+    return books
 
 
 def error_handler(err):
@@ -93,6 +107,43 @@ def save_json(dic_or_json):
 
     with open(file, 'wt') as f:
         json.dump(dic, f, ensure_ascii=False, indent=4)
+
+
+def make_carousel(event, books):
+    carousel_template = CarouselTemplate(columns=[
+        CarouselColumn(text='hoge1', title=books[0].title,
+                       thumbnail_image_url=books[0].large_image_url, actions=[
+            URITemplateAction(
+                label='Go to home', uri='https://line.me'
+            ),
+            PostbackTemplateAction(
+                label='ping', data='ping'
+            )
+        ]),
+        CarouselColumn(text='hoge2', title=books[1].title,
+                       thumbnail_image_url=books[1].large_image_url, actions=[
+                URITemplateAction(
+                    label='Go to home', uri='https://line.me'
+                ),
+                PostbackTemplateAction(
+                    label='ping', data='ping'
+                )
+            ]),
+        CarouselColumn(text='hoge3', title=books[2].title,
+                       thumbnail_image_url=books[2].large_image_url, actions=[
+                URITemplateAction(
+                    label='Go to home', uri='https://line.me'
+                ),
+                PostbackTemplateAction(
+                    label='ping', data='ping'
+                )
+            ]),
+    ])
+    template_message = TemplateSendMessage(
+        alt_text='Buttons alt text', template=carousel_template
+    )
+    line_bot_api.reply_message(event.reply_token,
+                               template_message)
 
 
 if __name__ == '__main__':
