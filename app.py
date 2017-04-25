@@ -21,6 +21,8 @@ from linebot.models import (
     ButtonsTemplate
 )
 
+from book import fetch_books, trim_str_60
+
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
 
@@ -56,12 +58,14 @@ def callback():
 def handle_message(event):
     amazon_api = amazon_init()
     books = fetch_books(amazon_api, keyword=event.message.text, num=3)
-    # line_bot_api.reply_message(
-    #     event.reply_token,
-    #     TextSendMessage(text=book_title)
-    # )
-    make_carousel(event, books)
-    #make_button(event, books)
+    if books is None:
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text='おすすめの本を見つけることができませんでした。')
+        )
+    else:
+        make_carousel(event, books, len(books))
+        #make_button(event, books)
 
 
 def amazon_init():
@@ -72,19 +76,6 @@ def amazon_init():
                            region='JP',
                            )
     return amazon_api
-
-
-def fetch_books(amazon_api, keyword='', num=1):
-    """
-    fetch three books using amazon api
-    
-    :param amazon_api: 
-    :param keyword: 
-    :return: books object
-    """
-    books = amazon_api.search_n(num, Keywords=keyword,
-                                SearchIndex='Books')
-    return books
 
 
 def error_handler(err):
@@ -111,28 +102,31 @@ def save_json(dic_or_json):
         json.dump(dic, f, ensure_ascii=False, indent=4)
 
 
-def make_carousel(event, books):
+def make_carousel(event, books, cnt):
+    """
+    1~3冊の本を取得してカルーセル型のリプライメッセージを作成し、返信する
+    max characters of title are 40
+    max characters of text are 60 
+    :param event: 
+    :param books: 
+    """
+    columns_list = []
     url_label = 'ウェブでさがす'
-    carousel_template = CarouselTemplate(columns=[
-        CarouselColumn(title='おすすめの本[1]', text=books[0].title,
-                       thumbnail_image_url=books[0].large_image_url, actions=[
+    for i in range(cnt):
+        title = 'おすすめの本' + str(i)
+        text = trim_str_60(books[i].title)
+        image = books[i].large_image_url
+        actions = [
             URITemplateAction(
-                label=url_label, uri=books[0].detail_page_url
-            ),
-        ]),
-        CarouselColumn(title='おすすめの本[2]', text=books[1].title,
-                   thumbnail_image_url=books[1].large_image_url, actions=[
-            URITemplateAction(
-                label=url_label, uri=books[1].detail_page_url
-            ),
-        ]),
-        CarouselColumn(title='おすすめの本[3]', text=books[2].title,
-                   thumbnail_image_url=books[2].large_image_url, actions=[
-            URITemplateAction(
-                label=url_label, uri=books[2].detail_page_url
-            ),
-        ]),
-    ])
+                label=url_label, uri=books[i].detail_page_url
+            )
+        ]
+        c_column = CarouselColumn(title=title,
+                       text=text,
+                       thumbnail_image_url=image,
+                       actions=actions)
+        columns_list.append(c_column)
+    carousel_template = CarouselTemplate(columns=columns_list)
     template_message = TemplateSendMessage(
         alt_text='Buttons alt text', template=carousel_template
     )
