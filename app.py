@@ -57,7 +57,7 @@ def callback():
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     amazon_api = amazon_init()
-    books = fetch_books(amazon_api, keyword=event.message.text, num=3)
+    books = fetch_books(amazon_api, keyword=event.message.text, num=5)
     if books is None:
         line_bot_api.reply_message(
             event.reply_token,
@@ -113,7 +113,7 @@ def make_carousel(event, books, cnt):
     columns_list = []
     url_label = 'ウェブでさがす'
     for i in range(cnt):
-        title = 'おすすめの本' + str(i)
+        title = 'おすすめの本 : ' + str(i+1) + '冊目'
         text = trim_str_60(books[i].title)
         image = books[i].large_image_url
         actions = [
