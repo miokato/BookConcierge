@@ -1,8 +1,11 @@
 import os
 import json
+import time
 from datetime import datetime
 
 from flask import Flask, request, abort
+
+from amazon.api import AmazonAPI
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -16,6 +19,10 @@ from linebot.models import (
 
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
+
+AMAZON_ACCESS_KEY = os.getenv('AMAZON_ACCESS_KEY')
+AMAZON_ACCESS_SECRET = os.getenv('AMAZON_SECRET_KEY')
+AMAZON_TAG = os.getenv('AMAZON_TAG')
 
 app = Flask(__name__)
 
@@ -43,12 +50,33 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    id = event
-    #profile = line_bot_api.get_profile(id)
+    book_title = fetch_book(event.message.text)
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=event.message.text)
+        TextSendMessage(text=book_title)
     )
+
+
+def fetch_book(keyword):
+    """fetch one book using amazon api"""
+    amazon_api = AmazonAPI(AMAZON_ACCESS_KEY,
+                           AMAZON_ACCESS_SECRET,
+                           AMAZON_TAG,
+                           ErrorHandler=error_handler,
+                           region='JP',
+                           )
+    book = amazon_api.search_n(1, Keywords=keyword,
+                                     SearchIndex='Books')
+    book_title = book[0].title
+    return book_title
+
+
+def error_handler(err):
+    """error handler for amazon api"""
+    ex = err['exception']
+    if ex.code == 503:
+        time.sleep(1)
+        return True
 
 
 def save_json(dic_or_json):
