@@ -41,7 +41,7 @@ def callback():
     body = request.get_data(as_text=True)
     app.logger.info('Request body: ' + body)
     # データをファイルとして保存
-    save_json(body)
+    # save_json(body)
 
     # handle webhook body
     try:
