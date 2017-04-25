@@ -17,7 +17,8 @@ from linebot.models import (
     MessageEvent, TextMessage, TextSendMessage,
     CarouselTemplate, CarouselColumn,
     URITemplateAction, PostbackTemplateAction,
-    MessageTemplateAction, TemplateSendMessage
+    MessageTemplateAction, TemplateSendMessage,
+    ButtonsTemplate
 )
 
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
@@ -29,7 +30,7 @@ AMAZON_TAG = os.getenv('AMAZON_TAG')
 
 app = Flask(__name__)
 
-line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
+line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN, timeout=50.0)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 
@@ -60,6 +61,7 @@ def handle_message(event):
     #     TextSendMessage(text=book_title)
     # )
     make_carousel(event, books)
+    #make_button(event, books)
 
 
 def amazon_init():
@@ -110,40 +112,51 @@ def save_json(dic_or_json):
 
 
 def make_carousel(event, books):
+    url_label = 'ウェブでさがす'
     carousel_template = CarouselTemplate(columns=[
-        CarouselColumn(text='hoge1', title=books[0].title,
+        CarouselColumn(title='おすすめの本[1]', text=books[0].title,
                        thumbnail_image_url=books[0].large_image_url, actions=[
             URITemplateAction(
-                label='Go to home', uri='https://line.me'
+                label=url_label, uri=books[0].detail_page_url
             ),
-            PostbackTemplateAction(
-                label='ping', data='ping'
-            )
         ]),
-        CarouselColumn(text='hoge2', title=books[1].title,
-                       thumbnail_image_url=books[1].large_image_url, actions=[
-                URITemplateAction(
-                    label='Go to home', uri='https://line.me'
-                ),
-                PostbackTemplateAction(
-                    label='ping', data='ping'
-                )
-            ]),
-        CarouselColumn(text='hoge3', title=books[2].title,
-                       thumbnail_image_url=books[2].large_image_url, actions=[
-                URITemplateAction(
-                    label='Go to home', uri='https://line.me'
-                ),
-                PostbackTemplateAction(
-                    label='ping', data='ping'
-                )
-            ]),
+        CarouselColumn(title='おすすめの本[2]', text=books[1].title,
+                   thumbnail_image_url=books[1].large_image_url, actions=[
+            URITemplateAction(
+                label=url_label, uri=books[1].detail_page_url
+            ),
+        ]),
+        CarouselColumn(title='おすすめの本[3]', text=books[2].title,
+                   thumbnail_image_url=books[2].large_image_url, actions=[
+            URITemplateAction(
+                label=url_label, uri=books[2].detail_page_url
+            ),
+        ]),
     ])
     template_message = TemplateSendMessage(
         alt_text='Buttons alt text', template=carousel_template
     )
     line_bot_api.reply_message(event.reply_token,
                                template_message)
+
+
+def make_button(event, books):
+   buttons_template = ButtonsTemplate(
+       title='button sample', type='buttons', text='hello my button', action=[
+           URITemplateAction(
+               label='go to line.me', uri='https://line.me'
+           ),
+           PostbackTemplateAction(label='ping', data='ping'),
+           PostbackTemplateAction(
+               label='ping with text', data='ping',
+               text='ping'
+           ),
+       ]
+   )
+   template_message = TemplateSendMessage(
+       alt_text='Buttons alt text', template=buttons_template
+   )
+   line_bot_api.reply_message(event.reply_token, template_message)
 
 
 if __name__ == '__main__':
