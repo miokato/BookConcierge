@@ -1,3 +1,7 @@
+"""
+Create and send message using Line Bot API.
+"""
+
 import os
 import json
 import time
@@ -5,7 +9,7 @@ from datetime import datetime
 
 from flask import Flask, request, abort
 
-from amazon.api import AmazonAPI
+from amazon.api import AmazonAPI, AmazonException
 
 from linebot import (
     LineBotApi, WebhookHandler
@@ -38,6 +42,10 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
 @app.route('/callback', methods=['POST'])
 def callback():
+    """
+    エンドポイントを叩かれると呼び出される関数
+    :return: 
+    """
     signature = request.headers['X-Line-Signature']
 
     body = request.get_data(as_text=True)
@@ -56,7 +64,20 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    """
+    イベントハンドラ。メッセージを受け取ると実行される
+    :param event: 
+    :return: 
+    """
     amazon_api = amazon_init()
+    try:
+        books = amazon_api.search_n(5,
+                                    Keyword=event.message.text,
+                                    SearchIndex='Books')
+    except AmazonException:
+        books = None
+
+
     books = fetch_books(amazon_api, keyword=event.message.text, num=5)
     if books is None:
         line_bot_api.reply_message(
