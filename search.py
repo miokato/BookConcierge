@@ -15,7 +15,7 @@ def fetch_books(keyword, number_of_books=1):
     :return: 3 list's tuple (title, image_link, detail_link)  
     """
     search_url = 'http://www.honyaclub.com/shop/goods/search.aspx?'
-    main_url = 'http://www.honyaclub.com'
+    main_url = 'https://www.honyaclub.com'
     encode_word = keyword.encode('Shift-JIS')
 
     payload = {
@@ -37,6 +37,11 @@ def fetch_books(keyword, number_of_books=1):
         # get href elements
         books_detail_elements = [book.a.get('href') for book in books_detail]
         books_detail_url = [urljoin(main_url, path) for path in books_detail_elements]
+
+        # get author data and url
+        books_info = books_data.find_all('dl', class_='item-txt')
+        books_author = [book.find('dd').find('a') for book in books_info]
+
     except AttributeError:
         return None
 
@@ -48,4 +53,4 @@ if __name__ == '__main__':
         books_title, books_image_url, books_detail_url = fetch_books('ねこ', number_of_books=3)
     except TypeError:
         print('本はありません')
-    print(books_image_url)
+    print(books_detail_url)

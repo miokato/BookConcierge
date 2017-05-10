@@ -63,26 +63,25 @@ def handle_message(event):
     :return: 
     """
 
-    books_title, books_image_url, books_detail_url = fetch_books(event.message.text, number_of_books=1)
-    if books_title is None:
+    try:
+        books_title, books_image_url, books_detail_url = fetch_books(event.message.text, number_of_books=5)
+    except TypeError:
+        msg = 'ごめんニャー。おすすめの本が見つからないニャー。'
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text='おすすめの本を見つけることができませんでした。')
+            TextSendMessage(text=msg)
         )
-    else:
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=books_title[0])
-        )
-        #make_carousel(event,
-        #              books_title,
-        #              books_image_url,
-        #              books_detail_url,
-        #              len(books_title))
-        #make_button(event, books)
+
+    template_message = create_carousel_template(event,
+                  books_title,
+                  books_image_url,
+                  books_detail_url,
+                  number_of_books=len(books_title))
+    line_bot_api.reply_message(event.reply_token,
+                           template_message)
 
 
-def make_carousel(event, books_title, books_image_url, books_detail_url, cnt):
+def create_carousel_template(event, books_title, books_image_url, books_detail_url, number_of_books=1):
     """
     1~3冊の本を取得してカルーセル型のリプライメッセージを作成し、返信する
     max characters of title are 40
@@ -92,9 +91,10 @@ def make_carousel(event, books_title, books_image_url, books_detail_url, cnt):
     """
     columns_list = []
     url_label = 'ウェブでさがす'
-    for i in range(cnt):
-        title = 'おすすめの本 : ' + str(i+1) + '冊目'
+    for i in range(number_of_books):
+        # title = 'おすすめの本 : ' + str(i+1) + '冊目'
         # text = trim_str_60(books_title[i])
+        title = books_title[i]
         text = books_title[i]
         image = books_image_url[i]
         actions = [
@@ -104,18 +104,17 @@ def make_carousel(event, books_title, books_image_url, books_detail_url, cnt):
         ]
         c_column = CarouselColumn(title=title,
                        text=text,
-                       thumbnail_image_url=image,
+                       thumbnail_image_url=books_image_url[i],
                        actions=actions)
         columns_list.append(c_column)
     carousel_template = CarouselTemplate(columns=columns_list)
     template_message = TemplateSendMessage(
         alt_text='Buttons alt text', template=carousel_template
     )
-    line_bot_api.reply_message(event.reply_token,
-                               template_message)
+    return  template_message
 
 
-def make_button(event, books):
+def create_button_template(event, books):
    buttons_template = ButtonsTemplate(
        title='button sample', type='buttons', text='hello my button', action=[
            URITemplateAction(
@@ -131,7 +130,7 @@ def make_button(event, books):
    template_message = TemplateSendMessage(
        alt_text='Buttons alt text', template=buttons_template
    )
-   line_bot_api.reply_message(event.reply_token, template_message)
+   return template_message
 
 
 if __name__ == '__main__':
