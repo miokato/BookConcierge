@@ -9,8 +9,6 @@ from datetime import datetime
 
 from flask import Flask, request, abort
 
-from amazon.api import AmazonAPI, AmazonException
-
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -25,14 +23,11 @@ from linebot.models import (
     ButtonsTemplate
 )
 
-from book import fetch_books, trim_str_60
+from book import trim_str_60
+from search import fetch_books
 
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
-
-AMAZON_ACCESS_KEY = os.getenv('AMAZON_ACCESS_KEY')
-AMAZON_ACCESS_SECRET = os.getenv('AMAZON_SECRET_KEY')
-AMAZON_TAG = os.getenv('AMAZON_TAG')
 
 app = Flask(__name__)
 
@@ -50,8 +45,6 @@ def callback():
 
     body = request.get_data(as_text=True)
     app.logger.info('Request body: ' + body)
-    # データをファイルとして保存
-    # save_json(body)
 
     # handle webhook body
     try:
@@ -69,61 +62,27 @@ def handle_message(event):
     :param event: 
     :return: 
     """
-    amazon_api = amazon_init()
-    try:
-        books = amazon_api.search_n(5,
-                                    Keyword=event.message.text,
-                                    SearchIndex='Books')
-    except AmazonException:
-        books = None
 
-
-    books = fetch_books(amazon_api, keyword=event.message.text, num=5)
-    if books is None:
+    books_title, books_image_url, books_detail_url = fetch_books(event.message.text, number_of_books=1)
+    if books_title is None:
         line_bot_api.reply_message(
             event.reply_token,
             TextSendMessage(text='おすすめの本を見つけることができませんでした。')
         )
     else:
-        make_carousel(event, books, len(books))
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=books_title[0])
+        )
+        #make_carousel(event,
+        #              books_title,
+        #              books_image_url,
+        #              books_detail_url,
+        #              len(books_title))
         #make_button(event, books)
 
 
-def amazon_init():
-    amazon_api = AmazonAPI(AMAZON_ACCESS_KEY,
-                           AMAZON_ACCESS_SECRET,
-                           AMAZON_TAG,
-                           ErrorHandler=error_handler,
-                           region='JP',
-                           )
-    return amazon_api
-
-
-def error_handler(err):
-    """error handler for amazon api"""
-    ex = err['exception']
-    if ex.code == 503:
-        time.sleep(1)
-        return True
-
-
-def save_json(dic_or_json):
-    """json形式か辞書型のデータを整形してjsonファイルとして書き出す"""
-    dir = './data/'
-    now = datetime.now().strftime('%Y%m%d_%H%M_%s')
-    prefix = 'time-'
-    suffix = '.json'
-    file = dir + prefix + now + suffix
-    if isinstance(dic_or_json, dict):
-        dic = dic_or_json
-    else:
-        dic = json.loads(dic_or_json)
-
-    with open(file, 'wt') as f:
-        json.dump(dic, f, ensure_ascii=False, indent=4)
-
-
-def make_carousel(event, books, cnt):
+def make_carousel(event, books_title, books_image_url, books_detail_url, cnt):
     """
     1~3冊の本を取得してカルーセル型のリプライメッセージを作成し、返信する
     max characters of title are 40
@@ -135,11 +94,12 @@ def make_carousel(event, books, cnt):
     url_label = 'ウェブでさがす'
     for i in range(cnt):
         title = 'おすすめの本 : ' + str(i+1) + '冊目'
-        text = trim_str_60(books[i].title)
-        image = books[i].large_image_url
+        # text = trim_str_60(books_title[i])
+        text = books_title[i]
+        image = books_image_url[i]
         actions = [
             URITemplateAction(
-                label=url_label, uri=books[i].detail_page_url
+                label=url_label, uri=books_detail_url[i]
             )
         ]
         c_column = CarouselColumn(title=title,
