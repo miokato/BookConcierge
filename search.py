@@ -2,24 +2,50 @@
 Search info about book from web. 
 """
 from pprint import pprint
+from urllib.parse import urljoin
 import requests
 from bs4 import BeautifulSoup as bs
 
-url = 'http://www.honyaclub.com/shop/goods/search.aspx?'
-url2 = 'http://www.honyaclub.com/shop/goods/search.aspx?cat_p=&search=x&keyw=%82%CB%82%B1&image.x=0&image.y=0'
-keyword = 'ねこ'
-encode_word = keyword.encode('Shift-JIS')
 
-payload = {
-    'search': 'x',
-    'keyw': encode_word,
-}
+def fetch_books(keyword, number_of_books=1):
+    """
+    Honya Clubから本のタイトル、詳細リンク、画像リンクを取得する
+    :param keyword: str (book title what you want search) 
+    :param number_of_books: int
+    :return: 3 list's tuple (title, image_link, detail_link)  
+    """
+    search_url = 'http://www.honyaclub.com/shop/goods/search.aspx?'
+    main_url = 'http://www.honyaclub.com'
+    encode_word = keyword.encode('Shift-JIS')
 
-r = requests.get(url, params=payload)
-soup = bs(r.content, 'html.parser')
-# aタグ全部取得
-links = soup.find_all('a')
-# links > class : bs4.element.ResultSet
-# aタグのhref属性を取得
-urls = [link.get('href') for link in links]
-pprint(links)
+    payload = {
+        'search': 'x',
+        'keyw': encode_word,
+    }
+
+    r = requests.get(search_url, params=payload)
+    soup = bs(r.content, 'html.parser')
+    try:
+        books_data = soup.find('div', class_='result-item')
+        # それぞれの本を取得
+        books_detail = books_data.find_all('div', class_='item-img', limit=number_of_books)
+        # get alt elements
+        books_title = [book.img.get('alt') for book in books_detail]
+        # get src elements
+        books_image_elements = [book.img.get('src') for book in books_detail]
+        books_image_url = [urljoin(main_url, path) for path in books_image_elements]
+        # get href elements
+        books_detail_elements = [book.a.get('href') for book in books_detail]
+        books_detail_url = [urljoin(main_url, path) for path in books_detail_elements]
+    except AttributeError:
+        return None
+
+    return (books_title, books_image_url, books_detail_url)
+
+
+if __name__ == '__main__':
+    try:
+        books_title, books_image_url, books_detail_url = fetch_books('ねこ', number_of_books=3)
+    except TypeError:
+        print('本はありません')
+    print(books_image_url)
