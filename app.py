@@ -23,8 +23,7 @@ from linebot.models import (
     ButtonsTemplate
 )
 
-from book import trim_str_60
-from search import fetch_books
+from search import BookScraper
 
 LINE_CHANNEL_ACCESS_TOKEN = os.getenv('LINE_CHANNEL_ACCESS_TOKEN')
 LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
@@ -33,6 +32,8 @@ app = Flask(__name__)
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN, timeout=50.0)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
+
+scraper = BookScraper()
 
 
 @app.route('/callback', methods=['POST'])
@@ -64,7 +65,7 @@ def handle_message(event):
     """
 
     try:
-        books_title, books_image_url, books_detail_url = fetch_books(event.message.text, number_of_books=5)
+        scraper.fetch(event.message.text, number_of_books=5)
     except TypeError:
         msg = 'ごめんニャー。おすすめの本が見つからないニャー。'
         line_bot_api.reply_message(
@@ -73,10 +74,10 @@ def handle_message(event):
         )
 
     template_message = create_carousel_template(event,
-                  books_title,
-                  books_image_url,
-                  books_detail_url,
-                  number_of_books=len(books_title))
+                  scraper.books_title,
+                  scraper.books_image_url,
+                  scraper.books_detail_url,
+                  number_of_books=scraper.number_of_books)
     line_bot_api.reply_message(event.reply_token,
                            template_message)
 
