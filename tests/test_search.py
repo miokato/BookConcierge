@@ -1,7 +1,21 @@
 import unittest
 from nose.tools import ok_, eq_
 
-from search import fetch_books
+from search import BookScraper, fetch_books
+
+
+class TestBookScraper(unittest.TestCase):
+    def setUp(self):
+        self.scraper = BookScraper()
+
+    def test_fetch_book_no_keyword(self):
+        self.scraper.fetch('', number_of_books=1)
+        eq_(self.scraper.books_title, [])
+
+    def test_fetch_book_long_keyword(self):
+        long_keyword = 'このねこの気持ちは誰がしっているというのか、いや知らない。'
+        self.scraper.fetch(long_keyword)
+        eq_(self.scraper.books_title, [])
 
 
 class TestFetchBooks(unittest.TestCase):
@@ -11,9 +25,6 @@ class TestFetchBooks(unittest.TestCase):
     input Nonetype
     return Nonetype
     """
-    def setUp(self):
-        pass
-
     # check common parameter
     def test_fetch_books_size(self):
         books = fetch_books('ねこ', number_of_books=2)
