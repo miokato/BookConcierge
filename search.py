@@ -11,7 +11,7 @@ def fetch_books(keyword, number_of_books=1):
     """
     Honya Clubから本のタイトル、詳細リンク、画像リンクを取得する
     :param keyword: str (book title what you want search) 
-    :param number_of_books: int
+    :param number_of_books: int ( 1 <= books <= 5 )
     :return: 3 list's tuple (title, image_link, detail_link)  
     """
     search_url = 'http://www.honyaclub.com/shop/goods/search.aspx?'
@@ -22,6 +22,9 @@ def fetch_books(keyword, number_of_books=1):
         'search': 'x',
         'keyw': encode_word,
     }
+
+    if number_of_books <= 0 or number_of_books > 5:
+        return None
 
     r = requests.get(search_url, params=payload)
     soup = bs(r.content, 'html.parser')
