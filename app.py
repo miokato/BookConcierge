@@ -6,6 +6,7 @@ import os
 import json
 import time
 from datetime import datetime
+from transitions import Machine
 
 from flask import Flask, request, abort
 from linebot import (
@@ -35,6 +36,21 @@ handler = WebhookHandler(LINE_CHANNEL_SECRET)
 scraper = BookScraper()
 
 
+class Concierge(object):
+    """
+    モード (日常会話, 本検索, レコメンド)
+    """
+    states = ['searching', 'talking', 'recommending']
+
+    def __init__(self, name):
+        self.name = name
+        self.machine = Machine(model=self, states=self.states, initial='talking')
+        self.machine.add_transition(trigger='search', source='*', dest='searching')
+        self.machine.add_transition(trigger='talk', source='*', dest='talking')
+        self.machine.add_transition(trigger='recommend', source='*', dest='recommending')
+
+nanako = Concierge('nanako')
+
 @app.route('/callback', methods=['POST'])
 def callback():
     """
@@ -63,22 +79,32 @@ def handle_message(event):
     :return: 
     """
 
-    try:
-        scraper.fetch(event.message.text, number_of_books=5)
-    except TypeError:
-        msg = 'ごめんニャー。おすすめの本が見つからないニャー。'
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=msg)
-        )
+    text = event.message.text
+    if text == '話そうよ':
+        nanako.talk()
+        res = 'OK'
+    elif text == 'おすすめは':
+        nanako.recommend()
+        res = 'OK'
+    elif text == 'さがして':
+        nanako.search()
+        res = 'OK'
+    else:
+        res = talk(nanako, text)
 
-    template_message = create_carousel_template(event,
-                  scraper.books_title,
-                  scraper.books_image_url,
-                  scraper.books_detail_url,
-                  number_of_books=scraper.number_of_books)
-    line_bot_api.reply_message(event.reply_token,
-                           template_message)
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=res)
+    )
+
+
+def talk(concierge, text):
+    if concierge.state == 'talking':
+        return '今日もいい天気ね'
+    elif concierge.state == 'searching':
+        return 'どんな種類の本を探そうか？'
+    elif concierge.state == 'recommending':
+        return '今月のおすすめは「ハンターXハンターね'
 
 
 def create_carousel_template(event, books_title, books_image_url, books_detail_url, number_of_books=1):
@@ -115,7 +141,6 @@ def create_carousel_template(event, books_title, books_image_url, books_detail_u
 
 
 def create_button_template(event, books):
-
    buttons_template = ButtonsTemplate(
        title='button sample', type='buttons', text='hello my button', action=[
            URITemplateAction(
