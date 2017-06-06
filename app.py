@@ -8,7 +8,6 @@ import time
 from datetime import datetime
 
 from flask import Flask, request, abort
-
 from linebot import (
     LineBotApi, WebhookHandler
 )
@@ -116,6 +115,7 @@ def create_carousel_template(event, books_title, books_image_url, books_detail_u
 
 
 def create_button_template(event, books):
+
    buttons_template = ButtonsTemplate(
        title='button sample', type='buttons', text='hello my button', action=[
            URITemplateAction(

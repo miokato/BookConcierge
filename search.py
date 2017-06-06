@@ -10,38 +10,41 @@ from bs4 import BeautifulSoup as bs
 class BookScraper(object):
     search_url = 'http://www.honyaclub.com/shop/goods/search.aspx?'
     main_url = 'https://www.honyaclub.com'
-    keyword = ''
     number_of_books = 1
     books_title = []
     books_image_url = []
     books_detail_url = []
 
     def fetch(self, keyword, number_of_books=1):
-        self.keyword = keyword
         self.number_of_books = number_of_books
-
-        encode_word = self.keyword.encode('Shift-JIS')
-
-        payload = {
-            'search': 'x',
-            'keyw': encode_word,
-        }
 
         if self.number_of_books <= 0 or self.number_of_books > 5:
             return None
+
+        if keyword == '':
+            self.books_title = ''
+            self.books_image_url = ''
+            self.books_detail_url = ''
+
+        encoded_keyword = keyword.encode('Shift-JIS')
+
+        payload = {
+            'search': 'x',
+            'keyw': encoded_keyword,
+        }
 
         r = requests.get(self.search_url, params=payload)
         soup = bs(r.content, 'html.parser')
         try:
             books_data = soup.find('div', class_='result-item')
-            # それぞれの本を取得
-            books_detail = books_data.find_all('div', class_='item-img', limit=self.number_of_books)
-            # get alt elements
+            books_detail = books_data.find_all('div', class_='item-img',
+                                               limit=self.number_of_books)
+
             self.books_title = [book.img.get('alt') for book in books_detail]
-            # get src elements
+
             books_image_elements = [book.img.get('src') for book in books_detail]
             self.books_image_url = [urljoin(self.main_url, path) for path in books_image_elements]
-            # get href elements
+
             books_detail_elements = [book.a.get('href') for book in books_detail]
             self.books_detail_url = [urljoin(self.main_url, path) for path in books_detail_elements]
 

@@ -8,13 +8,13 @@ class TestBookScraper(unittest.TestCase):
     def setUp(self):
         self.scraper = BookScraper()
 
-    def test_fetch_book_no_keyword(self):
+    def test_fetch_with_no_keyword(self):
         self.scraper.fetch('', number_of_books=1)
         eq_(self.scraper.books_title, [])
 
-    def test_fetch_book_long_keyword(self):
+    def test_fetch_with_long_keyword(self):
         long_keyword = 'このねこの気持ちは誰がしっているというのか、いや知らない。'
-        self.scraper.fetch(long_keyword)
+        self.scraper.fetch(long_keyword, number_of_books=1)
         eq_(self.scraper.books_title, [])
 
 
